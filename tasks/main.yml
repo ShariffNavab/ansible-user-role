@@ -1,0 +1,37 @@
+---
+# tasks file for usermanagement
+- name: configure sudoers file in sudoers.d
+  template:
+    src: templates/sudoersfile.j2
+    dest: /etc/sudoers.d/sudoersfile
+    mode: 0440
+    validate: 'visudo -cf %s'
+
+- name: Ensure all the required groups exist on the system
+  group:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - dev
+    - devlead
+    - devops
+    - devopslead
+
+- name: Create new users
+  user:
+    name: "{{ item.split(',')[0] | trim }}"
+    groups: "{{ item.split(',')[1] | trim }}"
+    shell: /bin/bash
+    state: "{{ item.split(',')[2] | trim }}"
+    remove: true
+  with_items: "{{ lookup('file', '{{ user_mapping_file_path }}').split('\n') }}"
+
+- name: Set up authorized key for present users
+  ansible.builtin.authorized_key:
+    user: "{{ item.split(',')[0] | trim }}"
+    state: present
+    key: "{{ lookup('file', pub_keys_dir_path + '/' + (item.split(',')[0] | trim)) }}"
+  with_items: "{{ lookup('file', user_mapping_file_path).split('\n') }}"
+  when: item.split(',') | length == 3 and item.split(',')[2] | trim == 'present'
+  ignore_errors: true
+
