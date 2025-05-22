@@ -26,12 +26,20 @@
     remove: true
   with_items: "{{ lookup('file', '{{ user_mapping_file_path }}').split('\n') }}"
 
-- name: Set up authorized key for present users
-  ansible.builtin.authorized_key:
+# - name: Set up authorized key for present users
+#   ansible.builtin.authorized_key:
+#     user: "{{ item.split(',')[0] | trim }}"
+#     state: present
+#     key: "{{ lookup('file', pub_keys_dir_path + '/' + (item.split(',')[0] | trim)) }}"
+#   with_items: "{{ lookup('file', user_mapping_file_path).split('\n') }}"
+#   when: item.split(',') | length == 3 and item.split(',')[2] | trim == 'present'
+#   ignore_errors: true
+
+- name: Set up authorized key
+  authorized_key:
     user: "{{ item.split(',')[0] | trim }}"
     state: present
-    key: "{{ lookup('file', pub_keys_dir_path + '/' + (item.split(',')[0] | trim)) }}"
-  with_items: "{{ lookup('file', user_mapping_file_path).split('\n') }}"
+    key: "{{ lookup('file', '{{ pub_keys_dir_path }}/{{ item.split(\",\")[0] }}' ) }}"
+  with_items: "{{ lookup('file', '{{ user_mapping_file_path }}').split('\n') }}"
   when: item.split(',') | length == 3 and item.split(',')[2] | trim == 'present'
   ignore_errors: true
-
